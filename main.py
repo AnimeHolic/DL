@@ -1,7 +1,6 @@
 import logging
-from telegram import Update
+from telegram import Update, ChatMember
 from telegram.ext import Application, CommandHandler, CallbackContext, ChatMemberHandler
-from telegram.error import TelegramError
 
 # Enable logging
 logging.basicConfig(
@@ -12,7 +11,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 TOKEN = "7868318183:AAHUhX19qeUq5lmR6HAPwijKBoP-jHF8quI"
-BOT_OWNER_USER_ID = 6053231890  # Replace this with your own Telegram user ID
+BOT_OWNER_USER_ID = 7338617044  # Replace this with your own Telegram user ID
 chat_ids = set()
 
 async def add_chat(update: Update, context: CallbackContext) -> None:
@@ -28,16 +27,16 @@ async def remove_deleted_accounts(update: Update, context: CallbackContext) -> N
                 chat = await context.bot.get_chat(chat_id)
                 members = await context.bot.get_chat_administrators(chat_id)
                 for member in members:
-                    if member.user.is_deleted:
+                    if member.status in ['left', 'kicked']:
                         try:
                             await context.bot.ban_chat_member(chat_id, member.user.id)
                             await context.bot.unban_chat_member(chat_id, member.user.id)
-                            logger.info(f'Removed deleted account: {member.user.id} from chat {chat.title}')
+                            logger.info(f'Removed account: {member.user.id} with status {member.status} from chat {chat.title}')
                         except Exception as e:
-                            logger.error(f'Failed to remove deleted account from chat {chat.title}: {e}')
+                            logger.error(f'Failed to remove account with status {member.status} from chat {chat.title}: {e}')
             except Exception as e:
                 logger.error(f'Error checking chat {chat_id}: {e}')
-        await update.message.reply_text("Checked and removed all deleted accounts from all managed groups and channels.")
+        await update.message.reply_text("Checked and removed all inactive accounts from all managed groups and channels.")
     else:
         if update.message:
             await update.message.reply_text("You are not authorized to use this command.")
