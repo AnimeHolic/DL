@@ -7,7 +7,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 # Define your bot token
-TOKEN = 'YOUR_BOT_TOKEN'
+TOKEN = '7868318183:AAHUhX19qeUq5lmR6HAPwijKBoP-jHF8quI'
 
 # Define a function to handle the /start command
 def start(update, context):
