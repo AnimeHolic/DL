@@ -1,49 +1,48 @@
 import logging
-from telegram import Update
-from telegram.ext import Updater, CommandHandler, CallbackContext
-from telegram.utils import helpers
+from telegram import Bot
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 # Enable logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Command to remove deleted accounts
-def remove_deleted_accounts(update: Update, context: CallbackContext):
-    # Check if the user is an admin
-    if not context.bot.get_chat_member(update.effective_chat.id, update.effective_user.id).status in ['administrator', 'creator']:
-        update.message.reply_text("You need to be an admin to use this command.")
-        return
+# Define your bot token
+TOKEN = 'YOUR_BOT_TOKEN'
 
-    # Get the chat members
-    members = context.bot.get_chat_members(update.effective_chat.id)
-    
-    deleted_count = 0
-    for member in members:
-        if member.user.is_deleted:
-            context.bot.kick_chat_member(update.effective_chat.id, member.user.id)
-            deleted_count += 1
+# Define a function to handle the /start command
+def start(update, context):
+    update.message.reply_text('Hello! I am a bot that removes deleted accounts from the group.')
 
-    update.message.reply_text(f"Removed {deleted_count} deleted accounts from the group.")
-
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text("Welcome! Use /remove_deleted to remove deleted accounts.")
+# Define a function to check and remove deleted accounts
+def remove_deleted_accounts(update, context):
+    chat_id = update.message.chat_id
+    bot = context.bot
+    try:
+        members = bot.get_chat_administrators(chat_id)
+        for member in members:
+            user = member.user
+            if user.is_deleted:
+                bot.kick_chat_member(chat_id, user.id)
+                update.message.reply_text(f'Removed deleted account: {user.id}')
+    except Exception as e:
+        logger.error(f'Error: {e}')
+        update.message.reply_text('An error occurred while trying to remove deleted accounts.')
 
 def main():
-    # Create the Updater and pass it your bot's token.
-    updater = Updater("7868318183:AAHUhX19qeUq5lmR6HAPwijKBoP-jHF8quI")
+    # Create the Updater and pass it your bot's token
+    updater = Updater(TOKEN, use_context=True)
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
 
-    # Add command handlers
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("remove_deleted", remove_deleted_accounts))
+    # Register command handlers
+    dp.add_handler(CommandHandler('start', start))
+    dp.add_handler(CommandHandler('clean', remove_deleted_accounts))
 
     # Start the Bot
     updater.start_polling()
 
-    # Run the bot until you send a signal to stop (Ctrl+C)
+    # Run the bot until you press Ctrl+C or the process receives SIGINT, SIGTERM or SIGABRT
     updater.idle()
 
 if __name__ == '__main__':
