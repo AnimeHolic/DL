@@ -1,56 +1,50 @@
 import logging
-from telegram import Update, ChatMember
-from telegram.ext import Application, CommandHandler, CallbackContext, ChatMemberHandler
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.utils import helpers
 
 # Enable logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-TOKEN = "7868318183:AAHUhX19qeUq5lmR6HAPwijKBoP-jHF8quI"
-BOT_OWNER_USER_ID = 7338617044  # Replace this with your own Telegram user ID
-chat_ids = set()
+# Command to remove deleted accounts
+def remove_deleted_accounts(update: Update, context: CallbackContext):
+    # Check if the user is an admin
+    if not context.bot.get_chat_member(update.effective_chat.id, update.effective_user.id).status in ['administrator', 'creator']:
+        update.message.reply_text("You need to be an admin to use this command.")
+        return
 
-async def add_chat(update: Update, context: CallbackContext) -> None:
-    chat = update.effective_chat
-    if chat and chat.type in ["group", "supergroup", "channel"]:
-        chat_ids.add(chat.id)
-        logger.info(f"Bot added to chat {chat.title} ({chat.id})")
+    # Get the chat members
+    members = context.bot.get_chat_members(update.effective_chat.id)
+    
+    deleted_count = 0
+    for member in members:
+        if member.user.is_deleted:
+            context.bot.kick_chat_member(update.effective_chat.id, member.user.id)
+            deleted_count += 1
 
-async def remove_deleted_accounts(update: Update, context: CallbackContext) -> None:
-    if update.message and update.message.from_user.id == BOT_OWNER_USER_ID:
-        for chat_id in chat_ids:
-            try:
-                chat = await context.bot.get_chat(chat_id)
-                members = await context.bot.get_chat_administrators(chat_id)
-                for member in members:
-                    if member.status in ['left', 'kicked']:
-                        try:
-                            await context.bot.ban_chat_member(chat_id, member.user.id)
-                            await context.bot.unban_chat_member(chat_id, member.user.id)
-                            logger.info(f'Removed account: {member.user.id} with status {member.status} from chat {chat.title}')
-                        except Exception as e:
-                            logger.error(f'Failed to remove account with status {member.status} from chat {chat.title}: {e}')
-            except Exception as e:
-                logger.error(f'Error checking chat {chat_id}: {e}')
-        await update.message.reply_text("Checked and removed all inactive accounts from all managed groups and channels.")
-    else:
-        if update.message:
-            await update.message.reply_text("You are not authorized to use this command.")
+    update.message.reply_text(f"Removed {deleted_count} deleted accounts from the group.")
 
-def main() -> None:
-    """Start the bot."""
-    application = Application.builder().token(TOKEN).build()
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text("Welcome! Use /remove_deleted to remove deleted accounts.")
 
-    application.add_handler(CommandHandler("start", add_chat))
-    application.add_handler(CommandHandler("remove_deleted", remove_deleted_accounts))
-    application.add_handler(ChatMemberHandler(add_chat, ChatMemberHandler.MY_CHAT_MEMBER))
+def main():
+    # Create the Updater and pass it your bot's token.
+    updater = Updater("7868318183:AAHUhX19qeUq5lmR6HAPwijKBoP-jHF8quI")
+
+    # Get the dispatcher to register handlers
+    dp = updater.dispatcher
+
+    # Add command handlers
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("remove_deleted", remove_deleted_accounts))
 
     # Start the Bot
-    application.run_polling()
+    updater.start_polling()
+
+    # Run the bot until you send a signal to stop (Ctrl+C)
+    updater.idle()
 
 if __name__ == '__main__':
     main()
