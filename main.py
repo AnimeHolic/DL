@@ -11,8 +11,8 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-TOKEN = "YOUR_BOT_TOKEN_HERE"
-BOT_OWNER_USER_ID = 123456789  # Replace this with your own Telegram user ID
+TOKEN = "7868318183:AAHUhX19qeUq5lmR6HAPwijKBoP-jHF8quI"
+BOT_OWNER_USER_ID = 6053231890  # Replace this with your own Telegram user ID
 chat_ids = set()
 
 def add_chat(update: Update, context: CallbackContext) -> None:
